@@ -69,7 +69,7 @@ rm(list = ls())
 #To set to own working directory
 #  select "Session->Set Working Directory->To Source File Location"
 #  then copy result in console into current "setwd("")".
-setwd("~/Desktop/PersonalNetworks-master")
+setwd("~/Desktop/London Project")
 
 #Detatches all packages from current iteration of R, most packages interfere with this code
 detach_all_packages <- function() {
@@ -98,8 +98,9 @@ library(igraph) # To transform and analyze network data
 
 #Read in data
 #Imports data and assigns it to variable "sample_data"
-sample_data <- read.csv("20180807_PersonalNetwork_data.csv", 
+sample_data <- read.csv("ToolForVisuallyMappi_DATA_2019-05-31_2140.csv", 
 	stringsAsFactors = FALSE)
+
 #Stores "sample_data" as a table data frame for easier reading
 base_data <- sample_data <- tbl_df(sample_data)
 
@@ -108,7 +109,7 @@ base_data <- sample_data <- tbl_df(sample_data)
 ###############################################################################
 
 #We'll do some quick example to show what is going on here.
-example_data <- sample_data %>% select(study_id, sex, race___1:race___88)
+example_data <- sample_data %>% select(record_id, sex, race___1:race___88)
 
 ################# Radial variable ############
 
@@ -124,13 +125,13 @@ levels(example_data$sex) <- c("Female","Male","Other")
 ############## Checkbox Variables ############
 
 #First we isolate the variables we want.
-r <- sample_data %>% select(study_id, race___1:race___88)
+r <- sample_data %>% select(record_id, race___1:race___88)
 
 #This is an extremely important part. Because of the way we end up sorting the
 #  data, the name for each column will end up being the actual value entered into
-#  our final dataset. So we name our study_id (which is used to preserve order),
+#  our final dataset. So we name our record_id (which is used to preserve order),
 #  and then we name each checkbox variable with its constituent answer.
-colnames(r) <- c("study_id", "Black or African American", "White",
+colnames(r) <- c("record_id", "Black or African American", "White",
                  "American Indian/Alaska Native", "Asian",
                  "Native Hawaiian or Other Pacific Islander", "Other",
                  "Skip question")
@@ -138,7 +139,7 @@ colnames(r) <- c("study_id", "Black or African American", "White",
 #I'll try to break down each step within the gather block...
 #First we will be assigning all of this to a variable. Don't assign it to the
 #  data directly as we can possibly lose order, and thus assign data into
-#  incorrect study_id's. We'll get to actual assignment later.
+#  incorrect record_id's. We'll get to actual assignment later.
 #Note that we use the function %>% or the "pipe function". This is from the R
 #  package "magrittr" (contained in tidyverse). This function basically allows us
 #  to chain other functions together in a clean manner. It automatically inputs
@@ -151,32 +152,32 @@ race1 <- r %>%
   #  within a dataframe into a "tall" dataset. Note that the names of each variable
   #  end up under "race", and then the "count" is the number assigned to this
   #  variable (its not literally the count of the variable, but the value assigned
-  #  to it). Note that was also use "-study_id" to ensure that the study_id's are
+  #  to it). Note that was also use "-record_id" to ensure that the record_id's are
   #  not added as a variable to be gathered, thus they are not counted but rather
   #  are duplicated for each "race", which makes them act like an identifier (and
   #  if we marked multiple variables they would do the same thing).
-  gather(race, count, -study_id) %>%
+  gather(race, count, -record_id) %>%
   
   #Third we filter out all rows which do not have the count (value) of "1". We can
   #  do this as REDCap checkbox variables are always binaries, so 1's will be a
   #  selected answer, 0's will be an unselected answer.
   filter(count == 1) %>% 
   
-  #Fourth we arrange the dataframe by the study_id. This way every study_id is
+  #Fourth we arrange the dataframe by the record_id. This way every record_id is
   #  next to each other and sequencial. Its not necessary, but more convenient
   #  visually.
-  arrange(study_id) %>%
+  arrange(record_id) %>%
   
   #Fifth we remove the variable "count". As we have already removed all variables
   #  which have the value of 0, we therefore know that all present variables are the
   #  selected option by the respondent.
   select(-count) %>%
   
-  #Sixth we group by study_id . Although not readily appearent by its visual
+  #Sixth we group by record_id . Although not readily appearent by its visual
   #  output, this effectively sets the data into groups by the values of the
-  #  designated key (study_id in this case). We can select individual parts of each
+  #  designated key (record_id in this case). We can select individual parts of each
   #  group at will, which leads to...
-  group_by(study_id) %>%
+  group_by(record_id) %>%
   
   #Seventh we slice out the portion of the group we desire. In this example we
   #  slice from index 1 of each group, or the first option that the respondent
@@ -202,15 +203,15 @@ race1 <- r %>%
 #Here's how it all looks put together. Note I'm not atually fully repeating the
 #  process, as I have slice(2) rather than slice(1), which means we are actually
 #  taking the 2nd possible value for the checkbox.
-race2 <- r %>% gather(race, count, -study_id) %>% filter(count == 1) %>% 
-  arrange(study_id) %>% select(-count) %>% group_by(study_id) %>% slice(2) %>% 
+race2 <- r %>% gather(race, count, -record_id) %>% filter(count == 1) %>% 
+  arrange(record_id) %>% select(-count) %>% group_by(record_id) %>% slice(2) %>% 
   data.frame()
 
 #Repeating a third time. I do not do this in the base code as we found no one
 #  ever entered more than 2 races, however I'm putting this here to give an
 #  example of how we would deal with >3 possible/likely options.
-race3 <- r %>% gather(race, count, -study_id) %>% filter(count == 1) %>% 
-  arrange(study_id) %>% select(-count) %>% group_by(study_id) %>% slice(3) %>% 
+race3 <- r %>% gather(race, count, -record_id) %>% filter(count == 1) %>% 
+  arrange(record_id) %>% select(-count) %>% group_by(record_id) %>% slice(3) %>% 
   data.frame()
 
 #Now we use the function "left_join()" to combine the variables we stored our
@@ -220,16 +221,16 @@ race3 <- r %>% gather(race, count, -study_id) %>% filter(count == 1) %>%
 #  preserved in this dataset, as well as "NA's" automatically introduced if the
 #  row does not exist in the dataset we attaching. This can be important as you
 #  should always put the dataset you are adding stuff onto first in the function.
-race <- left_join(race1, race2, by = 'study_id')
-race <- left_join(race, race3, by = 'study_id')
+race <- left_join(race1, race2, by = 'record_id')
+race <- left_join(race, race3, by = 'record_id')
 
 #Now we just name the variables of our combined dataset to our desired names.
-colnames(race) <- c("study_id", "race1", "race2", "race3")
+colnames(race) <- c("record_id", "race1", "race2", "race3")
 
 #Finally we left_join the combined dataset onto our base dataset. We also remove
 #  the raw variables which constructed this processed data in this example, but
 #  you do not need to do this if you feel that it is unnessary.
-example_data <- left_join(example_data, race, by = "study_id") %>% 
+example_data <- left_join(example_data, race, by = "record_id") %>% 
   select(-race___1:-race___88)
 
 #Removing Examples so we may start doing actual processing
@@ -243,9 +244,9 @@ rm(example_data, r, race, race1, race2, race3)
 
 
 #Study ID######################################################################
-#Set study_id variable to category to signify the unique values of each
-#study_id. This may not be necessary.
-sample_data$study_id <- factor(sample_data$study_id)
+#Set record_id variable to category to signify the unique values of each
+#record_id. This may not be necessary.
+sample_data$record_id <- factor(sample_data$record_id)
 
 
 #Sex ##########################################################################
@@ -257,8 +258,8 @@ levels(sample_data$sex) <- c("Female","Male","Other")
 #Due to multiple choice, code below organizes respondent's choices
 #  into race1 and race2. If the respondent only chooses 1 race, the value for 
 #  "race2" will be NA
-r <- sample_data %>% select(study_id, race___1:race___88)
-colnames(r) <- c("study_id", "Black or African American", "White",
+r <- sample_data %>% select(record_id, race___1:race___88)
+colnames(r) <- c("record_id", "Black or African American", "White",
                  "American Indian/Alaska Native", "Asian",
                  "Native Hawaiian or Other Pacific Islander", "Other",
                  "Skip question")
@@ -266,30 +267,24 @@ colnames(r) <- c("study_id", "Black or African American", "White",
 #  if the participant selects multiple races, then "race1" variable represents
 #  the race that appears first in the list of choices, and does NOT denote any 
 #  ordering assigned by the participant 
-race1 <- r %>% gather(race, count, -study_id) %>% filter(count == 1) %>% 
-  arrange(study_id) %>% select(-count) %>% group_by(study_id) %>% slice(1) %>% 
+race1 <- r %>% gather(race, count, -record_id) %>% filter(count == 1) %>% 
+  arrange(record_id) %>% select(-count) %>% group_by(record_id) %>% slice(1) %>% 
   data.frame()
 #creates variable, "race2", that contains the second race a participant chooses
 #  if the participant selects multiple races, then "race2" variable represents
 #  the race that appears second in the list of choices, and does NOT denote any 
 #  ordering assigned by the participant 
-race2 <- r %>% gather(race, count, -study_id) %>% filter(count == 1) %>% 
-  arrange(study_id) %>% select(-count) %>% group_by(study_id) %>% slice(2) %>% 
+race2 <- r %>% gather(race, count, -record_id) %>% filter(count == 1) %>% 
+  arrange(record_id) %>% select(-count) %>% group_by(record_id) %>% slice(2) %>% 
   data.frame()
 
-#creates a table that combines "race1" and "race2" by study_id
-race <- left_join(race1, race2, by = 'study_id')
-colnames(race) <- c("study_id", "race1", "race2")
+#creates a table that combines "race1" and "race2" by record_id
+race <- left_join(race1, race2, by = 'record_id')
+colnames(race) <- c("record_id", "race1", "race2")
 #adds "race" table onto "sample_data", thus adding variables "race1" and "race2"
 #  to the original data frame, containing all variables
-sample_data <- left_join(sample_data, race, by = "study_id") %>% 
+sample_data <- left_join(sample_data, race, by = "record_id") %>% 
   select(-race___1:-race___88)
-
-#Ego's Ethnicity###############################################################
-sample_data$ethnicity <- factor(sample_data$ethnicity, levels = c(0,1,99,88))
-levels(sample_data$ethnicity) <- c("Hispanic or Latino",
-                                   "NOT Hispanic or Latino", "Unknown",
-                                   "Skip Question")
 
 #Education#####################################################################
 sample_data$edu <- factor(sample_data$edu, 
@@ -297,20 +292,6 @@ sample_data$edu <- factor(sample_data$edu,
 levels(sample_data$edu) <- c("Some high school or less", "High school grad", 
 	"Some college", "Associate degree", "Bachelor's degree", "Graduate degree",
 	"Prefer not to answer")
-
-#Ego Zip Code##################################################################
-#Zip codes have a habit of being mangled by the read.csv import tool as many
-#zips will have 0's at the beginning of their number. Instead we re-import the
-#data as characters, and only save the zip
-zip_logic <- match("zip" ,colnames(base_data))
-col_logic <- c(rep("NULL", times = (zip_logic-1)),"character",
-               rep("NULL", times = ncol(base_data) - (zip_logic+1)))
-zip_import <- read.csv("20180807_PersonalNetwork_data.csv", colClasses = col_logic)
-sample_data$zip <- zip_import$zip
-rm(zip_import,col_logic,zip_logic)
-#AD: look at my zip code mapping short code. It allows you to map all participants
-#on a map of the US. Helpful quick visual.
-
 
 #Ego Employment################################################################
 
@@ -369,8 +350,8 @@ levels(sample_data$diet) <- c("Yes","No")
 #The code below organizes the Ego's Health Problems (in which the participant
 #  can select multiple choices) into columns. 
 #same code as for "race" variable
-h <- sample_data %>% select(study_id, health___1:health___0)
-colnames(h) <- c("study_id", "General Health", "Pain", "Cognitive/Mental Health",
+h <- sample_data %>% select(record_id, health___1:health___0)
+colnames(h) <- c("record_id", "General Health", "Pain", "Cognitive/Mental Health",
                  "Cardiac", "No Problems")
 #creates variable, "health_prob1", that contains the first health problem a 
 #  participant chooses if the participant selects multiple health problems, 
@@ -379,165 +360,47 @@ colnames(h) <- c("study_id", "General Health", "Pain", "Cognitive/Mental Health"
 #  assigned by the participant 
 #The same code is then used to create variables for any second, third, or fourth
 #  health problems the participant chooses.
-health_prob1 <- h %>% gather(health_prob, count, -study_id) %>% 
-  filter(count == 1) %>% arrange(study_id) %>% select(-count) %>% 
-  group_by(study_id) %>% slice(1) %>% data.frame()
-health_prob2 <- h %>% gather(health_prob, count, -study_id) %>% 
-  filter(count == 1) %>% arrange(study_id) %>% select(-count) %>% 
-  group_by(study_id) %>% slice(2) %>% data.frame()
-health_prob3 <- h %>% gather(health_prob, count, -study_id) %>% 
-  filter(count == 1) %>% arrange(study_id) %>% select(-count) %>% 
-  group_by(study_id) %>% slice(3) %>% data.frame()
-health_prob4 <- h %>% gather(health_prob, count, -study_id) %>% 
-  filter(count == 1) %>% arrange(study_id) %>% select(-count) %>% 
-  group_by(study_id) %>% slice(4) %>% data.frame()
-health_problems <- left_join(health_prob1, health_prob2, by = 'study_id')
-health_problems <- left_join(health_problems, health_prob3, by = 'study_id')
-health_problems <- left_join(health_problems, health_prob4, by = 'study_id')
-colnames(health_problems) <- c("study_id", "health_problem1", "health_problem2",
+health_prob1 <- h %>% gather(health_prob, count, -record_id) %>% 
+  filter(count == 1) %>% arrange(record_id) %>% select(-count) %>% 
+  group_by(record_id) %>% slice(1) %>% data.frame()
+health_prob2 <- h %>% gather(health_prob, count, -record_id) %>% 
+  filter(count == 1) %>% arrange(record_id) %>% select(-count) %>% 
+  group_by(record_id) %>% slice(2) %>% data.frame()
+health_prob3 <- h %>% gather(health_prob, count, -record_id) %>% 
+  filter(count == 1) %>% arrange(record_id) %>% select(-count) %>% 
+  group_by(record_id) %>% slice(3) %>% data.frame()
+health_prob4 <- h %>% gather(health_prob, count, -record_id) %>% 
+  filter(count == 1) %>% arrange(record_id) %>% select(-count) %>% 
+  group_by(record_id) %>% slice(4) %>% data.frame()
+health_problems <- left_join(health_prob1, health_prob2, by = 'record_id')
+health_problems <- left_join(health_problems, health_prob3, by = 'record_id')
+health_problems <- left_join(health_problems, health_prob4, by = 'record_id')
+colnames(health_problems) <- c("record_id", "health_problem1", "health_problem2",
                                "health_problem3", "health_problem4")
-sample_data <- left_join(sample_data, health_problems, by = "study_id") %>% 
+sample_data <- left_join(sample_data, health_problems, by = "record_id") %>% 
   select(-health___1:-health___0)
 
 # Technical Difficulties ######################################################
 sample_data$difficulties <- factor(sample_data$difficulties, levels = c(1,0))
 levels(sample_data$difficulties) <- c("Yes", "No")
 
-# Completed Survey ############################################################
-sample_data$network_survey_2_complete <-
-  factor(sample_data$network_survey_2_complete, levels = c(0,1,2))
-levels(sample_data$network_survey_2_complete) <-
-  c("Incomplete", "Unverified", "Complete")
-
 #Network Size and Ties#########################################################
 
 ##Calculate total network size. Defined as all unique names entered in name
 #generator boxes and extra boxes provided.
 
-calculate_size <- function(x) {
-  ##########
-  # Function: Creates a network_size variable that takes into account any names 
-  #           written in the extra names boxes
-  # Inputs: x = Variable that stores the dataset
-  # Ouputs: network_size variable for each ID 
-    ##########
-  #first select all names put in the first 15 columns 
-  names_first_15 <- sample_data %>% select(name1, name2, name3, name4, name5, 
-  	name6, name7, name8, name9, name10, name11, name12, name13, name14, name15)
-  
-  #next, select the names for id x
-  names_first_15 <- names_first_15[x, ]
-  
-  #create data frame and transpose it to make it easier to manage 
-  names_first_15 <- as.data.frame(t(names_first_15))	
-  
-  #change the column name
-  colnames(names_first_15) <- c("Names")
-  	
-  #select the keep/remove designation, stored as variables "name_1" to "name_15"
-  #  for each of the first 15 names 
-  keep_names <- sample_data %>% select(name_1:name_15)
-  keep_names <- keep_names[x, ]
-  
-  #change colnames to numbers 1:15, so that it is easier to do rbind
-  colnames(keep_names) <- c(1:15)
-  
-  #input the data into a data frame and transpose it
-  keep_names <- data.frame(t(keep_names))
-  
-  #change the name of the column to "Value"
-  colnames(keep_names) = "Value"
-  
-  #combine "names_first_15" (the first 15 names entered) and "keep_names" (the 
-  #  keep/remove designation for each of the first 15 names) using cbind function
-  names_combined <- cbind(names_first_15, keep_names)
-  
-  #remove any row that contain NA in names_combined
-  names_combined <- names_combined[complete.cases(names_combined), ]
-  
-  #split names_combined into names designated as "keep" (Value = 1) and 
-  #  names designated as "remove" (Value = 0)
-  names_combined_keep <- split(names_combined, names_combined$Value == 1)
-  
-  # Select only the names designated as $`TRUE` ("keep")
-  names_combined_keep <- names_combined_keep$`TRUE`
-  
-  #Change all characters into Uppercase
-  names_combined_keep <- toupper(names_combined_keep$Names)
-  
-  #Remove any spaces 
-  names_combined_keep <- gsub(" ", "", names_combined_keep)
-  
-  #Make names_combined_keep into a data frame to make it easier to manage
-  names_combined_keep <- data.frame(names_combined_keep)
-  colnames(names_combined_keep) <- "Names"
-  
-  #Now, take all of the names from the 3 extra names boxes 
-  #  Strsplit : split names based on coma saparated value and change them into 
-  #  characters. 
-  names_box1 <- strsplit(as.character(sample_data$more_names_1)[x], 
-  	split = ",")
-  names_box2 <- strsplit(as.character(sample_data$more_names_2)[x], 
-  	split = ",")
-  names_box3 <- strsplit(as.character(sample_data$more_names_3)[x], 
-  	split = ",")
-  
-  #Unlist names_box1:names_box3 and create a vector of names for each extra names 
-  #  box
-  names_box1 <- as.vector(unlist(names_box1, use.names = FALSE))
-  names_box2 <- as.vector(unlist(names_box2, use.names = FALSE))
-  names_box3 <- as.vector(unlist(names_box3, use.names = FALSE))
-  
-  #combine the 3 extra names vectors into list so that we can combine 
-  #  names_box1:3 into one vector
-  names_box <- list(names_box1, names_box2, names_box3)
-  
-  #make the names_box list into a vector
-  names_box <- Reduce(c, names_box)
-  
-  #remove "NA" in names_box
-  names_box <- names_box[!is.na(names_box)]
-  
-  #Remove Spaces in names_box
-  names_box <- gsub(" ", "", names_box)
-  
-  #Change all character in names_box to uppercase 
-  names_box <- toupper(names_box)
-  
-  #Remove duplicates values in names_box vector
-  names_box <- unique(names_box)
-  
-  #makes names_box into a data frame and change the column name to "Names" 
-  #  to make it easier to merge with names_combined_keep
-  names_box <- data.frame(names_box)
-  colnames(names_box) <- "Names"
-  
-  # Merge unique names from boxes with unique names of first 15 and 
-  #remove duplicates between them 
-  #  Keep this order. Placing names_combined_keep first preserves any duplicate 
-  #  names that both designated as "keep" by the participant 
-  names_network <- merge(names_combined_keep,names_box,by = c("Names"), all = TRUE)
-  
-  # convert names_network into a vector
-  names_network <- as.vector(t(names_network))
-  
-  #calculate the total network size
-  total_size <- length(names_network)
-  return(total_size)
-}
-
 #apply 'calculate_size' function to all study IDs
-network_size <- unlist(lapply(1:nrow(sample_data), calculate_size))
+network_size <- sample_data %>% select(name_1:name_15) %>% apply(1,sum)
 
 #merge network_size and remove other size variables to reduce confusion
 sample_data <- cbind(sample_data, network_size) %>% select(-size, -first)
 
-#Select study_id and each relationship tie
-shape <- sample_data %>% select(study_id, tie1:a_tie105) %>%
-  group_by(study_id) %>% slice(1)
+#Select record_id and each relationship tie
+shape <- sample_data %>% select(record_id, tie1:a_tie105) %>%
+  group_by(record_id) %>% slice(1)
 
 #Making a function that will create a blank matrix, then fill it with ties 
-#from one study_id, then assign EGO and alter number to the matrix
+#from one record_id, then assign EGO and alter number to the matrix
 make_matrix <- function(x) {
   ##########
   # Function: Creates an NA-stripped matrix from a single row dataset
@@ -620,15 +483,14 @@ effsize <- unlist(lapply(mats, function(x){as.numeric(index.egonet(x,
 structure <- data.frame(max_degree, mean_degree, density, constraint,
                         constraintInt = constraint * 100, effsize)
 
-#Add study_id to "structure" data frame, so that we can add it to the original 
+#Add record_id to "structure" data frame, so that we can add it to the original 
 #  data set
-study_id <- shape$study_id[!rowsize < 3] #study id without small networks
-structure <- cbind(study_id = study_id, structure, stringsAsFactors = FALSE)
+record_id <- shape$record_id[!rowsize < 3] #study id without small networks
+structure <- cbind(record_id = record_id, structure, stringsAsFactors = FALSE)
 
-#Add the "structure" data frame to the original data set by matching "study_id"
-sample_data <- left_join(sample_data, structure, by = c("study_id")) 
+#Add the "structure" data frame to the original data set by matching "record_id"
+sample_data <- left_join(sample_data, structure, by = c("record_id")) 
 
 
 #create ego data file of data frame with all changes made in code
 save(sample_data, file = "ego_data.rda")
-
